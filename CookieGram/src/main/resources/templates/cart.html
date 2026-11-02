@@ -1,9 +1,12 @@
+
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CookieGram | Your Cart</title>
+
     <style>
         * {
             box-sizing: border-box;
@@ -15,8 +18,6 @@
             background: #fff5e9;
             color: #493024;
         }
-
-        /* Header */
 
         header {
             display: flex;
@@ -33,22 +34,19 @@
             font-size: 28px;
         }
 
-        .logo a {
+        .logo a,
+        .header-link {
             color: white;
             text-decoration: none;
         }
 
         .header-link {
-            color: white;
-            text-decoration: none;
             font-weight: bold;
         }
 
         .header-link:hover {
             text-decoration: underline;
         }
-
-        /* Main content */
 
         main {
             max-width: 800px;
@@ -84,8 +82,6 @@
             color: #746258;
         }
 
-        /* Cart table */
-
         .table-wrapper {
             overflow-x: auto;
         }
@@ -107,6 +103,32 @@
             font-size: 14px;
         }
 
+        .quantity-form {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quantity-input {
+            width: 65px;
+            padding: 7px;
+            border: 1px solid #c9b6a8;
+            border-radius: 6px;
+        }
+
+        .update-button {
+            padding: 7px 12px;
+            border: none;
+            border-radius: 6px;
+            background: #8b4513;
+            color: white;
+            cursor: pointer;
+        }
+
+        .update-button:hover {
+            background: #69330d;
+        }
+
         .remove-button {
             padding: 6px 12px;
             border: 1px solid #c9b6a8;
@@ -125,8 +147,6 @@
             text-align: right;
             font-size: 20px;
         }
-
-        /* Checkout buttons */
 
         .checkout-box {
             margin-top: 28px;
@@ -184,33 +204,40 @@
         }
     </style>
 </head>
+
 <body>
 
     <header>
-
         <h1 class="logo">
             <a th:href="@{/}">🍪 CookieGram</a>
         </h1>
 
-        <a th:href="@{/products}" class="header-link">Shop Cookies</a>
-
+        <a th:href="@{/products}" class="header-link">
+            Shop Cookies
+        </a>
     </header>
 
     <main>
 
         <h2>Your Cart</h2>
 
-        <div th:if="${error}" class="message error" role="alert"
-             th:text="${error}"></div>
+        <!-- Error message -->
+        <div th:if="${error}"
+             class="message error"
+             role="alert"
+             th:text="${error}">
+        </div>
 
         <div class="panel">
 
             <!-- Empty cart -->
-            <div th:if="${#lists.isEmpty(cartItems)}" class="empty">
+            <div th:if="${#lists.isEmpty(cartItems)}"
+                 class="empty">
 
                 <p>Your cart is empty.</p>
 
-                <a th:href="@{/products}" class="primary-button">
+                <a th:href="@{/products}"
+                   class="primary-button">
                     Browse our cookies
                 </a>
 
@@ -229,73 +256,122 @@
                                 <th>Price</th>
                                 <th>Qty</th>
                                 <th>Subtotal</th>
-                                <th></th>
+                                <th>Action</th>
                             </tr>
                         </thead>
 
                         <tbody>
+
                             <tr th:each="item : ${cartItems}">
 
-                                <td th:text="${item.product.name}">Cookie</td>
+                                <!-- Cookie name -->
+                                <td th:text="${item.product.name}">
+                                    Cookie
+                                </td>
 
+                                <!-- Unit price -->
                                 <td th:text="'$' + ${#numbers.formatDecimal(item.product.price, 1, 2)}">
                                     $0.00
                                 </td>
 
-                                <td th:text="${item.quantity}">1</td>
+                                <!-- Update quantity -->
+                                <td>
 
+                                    <form th:action="@{/cart/update}"
+                                          method="post"
+                                          class="quantity-form">
+
+                                        <input type="hidden"
+                                               name="productId"
+                                               th:value="${item.product.id}">
+
+                                        <input type="number"
+                                               name="quantity"
+                                               th:value="${item.quantity}"
+                                               min="1"
+                                               max="50"
+                                               required
+                                               class="quantity-input">
+
+                                        <button type="submit"
+                                                class="update-button">
+                                            Update
+                                        </button>
+
+                                    </form>
+
+                                </td>
+
+                                <!-- Subtotal -->
                                 <td th:text="'$' + ${#numbers.formatDecimal(item.subtotal, 1, 2)}">
                                     $0.00
                                 </td>
 
+                                <!-- Remove product -->
                                 <td>
-                                    <form th:action="@{/cart/remove}" method="post">
 
-                                        <input type="hidden" name="productId"
+                                    <form th:action="@{/cart/remove}"
+                                          method="post">
+
+                                        <input type="hidden"
+                                               name="productId"
                                                th:value="${item.product.id}">
 
-                                        <button type="submit" class="remove-button">
+                                        <button type="submit"
+                                                class="remove-button">
                                             Remove
                                         </button>
 
                                     </form>
+
                                 </td>
 
                             </tr>
+
                         </tbody>
 
                     </table>
 
                 </div>
 
+                <!-- Running total -->
                 <div class="total-row">
+
                     Total:
+
                     <strong th:text="'$' + ${#numbers.formatDecimal(cartTotal, 1, 2)}">
                         $0.00
                     </strong>
+
                 </div>
 
+                <!-- Checkout -->
                 <div class="checkout-box">
 
-                    <!-- Logged-in customers go straight to checkout -->
+                    <!-- Logged-in customer -->
                     <div th:if="${isCustomer}">
-                        <a th:href="@{/customer/payment}" class="primary-button">
+
+                        <a th:href="@{/customer/payment}"
+                           class="primary-button">
                             Proceed to Checkout
                         </a>
+
                     </div>
 
-                    <!-- Everyone else can log in or check out as a guest -->
+                    <!-- Guest or unauthenticated visitor -->
                     <div th:unless="${isCustomer}">
 
                         <p>How would you like to check out?</p>
 
                         <div class="button-row">
 
-                            <a th:href="@{/login}" class="primary-button">
+                            <a th:href="@{/login}"
+                               class="primary-button">
                                 Log In to Checkout
                             </a>
 
-                            <a th:href="@{/guest/checkout}" class="secondary-button">
+                            <a th:href="@{/guest/checkout}"
+                               class="secondary-button">
                                 Checkout as Guest
                             </a>
 
@@ -303,7 +379,9 @@
 
                         <p class="small">
                             New here?
-                            <a th:href="@{/register}">Create an account</a>
+                            <a th:href="@{/register}">
+                                Create an account
+                            </a>
                         </p>
 
                     </div>
@@ -314,7 +392,9 @@
 
         </div>
 
-        <a th:href="@{/products}" class="back-link">← Continue shopping</a>
+        <a th:href="@{/products}" class="back-link">
+            ← Continue shopping
+        </a>
 
     </main>
 

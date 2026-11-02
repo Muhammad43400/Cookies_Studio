@@ -1,5 +1,5 @@
-package ca.sheridancollege.aljanmus.controllers;
 
+package ca.sheridancollege.aljanmus.controllers;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -35,6 +35,20 @@ public class Cart {
     public synchronized void remove(String productId) {
 
         items.remove(productId);
+    }
+
+    // Update the quantity of an existing product in the cart
+    public synchronized void updateQuantity(String productId, int quantity) {
+
+        // Reject invalid quantities without changing the cart
+        if (quantity < 1 || quantity > MAX_PER_PRODUCT) {
+            return;
+        }
+
+        // Only update products already in the cart
+        if (items.containsKey(productId)) {
+            items.put(productId, quantity);
+        }
     }
 
     public synchronized void clear() {

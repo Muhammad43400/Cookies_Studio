@@ -229,6 +229,28 @@ public class ShopController {
         return "redirect:/cart";
     }
 
+    // Update the quantity of an existing item in the shopping cart
+    @PostMapping("/cart/update")
+    public String updateCartQuantity(
+            @RequestParam String productId,
+            @RequestParam int quantity,
+            RedirectAttributes redirectAttributes) {
+
+        if (findProduct(productId) == null || !cart.getItems().containsKey(productId)) {
+            redirectAttributes.addFlashAttribute("error", "That cookie is not in your cart.");
+            return "redirect:/cart";
+        }
+
+        if (quantity < 1 || quantity > 50) {
+            redirectAttributes.addFlashAttribute("error", "Please enter a valid quantity between 1 and 50.");
+            return "redirect:/cart";
+        }
+
+        cart.updateQuantity(productId, quantity);
+        redirectAttributes.addFlashAttribute("success", "Cart quantity updated successfully.");
+        return "redirect:/cart";
+    }
+
     // Checkout page for logged-in customers
     @GetMapping("/customer/payment")
     public String customerCheckout(
