@@ -38,14 +38,13 @@ public class ShopController {
     private final List<Map<String, Object>> orders =
             new CopyOnWriteArrayList<>();
 
-    // The three cookie bases, in the order they appear on the products page
+    // The three cookie bases
     private static final String CLASSIC = "Classic";
     private static final String CHOCOLATE = "Chocolate";
     private static final String DIETARY = "Dietary";
 
     /*
-     * The cookies we sell, grouped by base. Kept in memory for now.
-     * Products without an image show a cookie icon instead.
+     * The cookies we sell, grouped by base.
      */
     private final List<Product> products = List.of(
 
@@ -150,7 +149,6 @@ public class ShopController {
     );
 
     public ShopController(Cart cart) {
-
         this.cart = cart;
     }
 
@@ -158,8 +156,6 @@ public class ShopController {
     @GetMapping("/products")
     public String products(Model model) {
 
-        // Group the cookies by base, keeping the order above:
-        // Classic -> [...], Chocolate -> [...], Dietary -> [...]
         Map<String, List<Product>> productsByCategory = products.stream()
                 .collect(Collectors.groupingBy(
                     Product::getCategory,
@@ -168,7 +164,6 @@ public class ShopController {
                 ));
 
         model.addAttribute("productsByCategory", productsByCategory);
-
         model.addAttribute("cartCount", cart.getCount());
 
         return "products";
@@ -177,16 +172,12 @@ public class ShopController {
     // Add a product to the cart
     @PostMapping("/cart/add")
     public String addToCart(
-
             @RequestParam String productId,
-
             @RequestParam(defaultValue = "1") int quantity,
-
             RedirectAttributes redirectAttributes) {
 
         Product product = findProduct(productId);
 
-        // Check the product exists and the quantity is reasonable
         if (product == null || quantity < 1 || quantity > 20) {
 
             redirectAttributes.addFlashAttribute(
@@ -213,9 +204,8 @@ public class ShopController {
 
         addCartDetails(model);
 
-        // Logged-in customers go straight to checkout;
-        // everyone else chooses to log in or check out as a guest
-        model.addAttribute("isCustomer", request.isUserInRole("CUSTOMER"));
+        model.addAttribute(
+                "isCustomer", request.isUserInRole("CUSTOMER"));
 
         return "cart";
     }
@@ -229,50 +219,57 @@ public class ShopController {
         return "redirect:/cart";
     }
 
-    // Update the quantity of an existing item in the shopping cart
+    // Update the quantity of an existing item
     @PostMapping("/cart/update")
     public String updateCartQuantity(
             @RequestParam String productId,
             @RequestParam int quantity,
             RedirectAttributes redirectAttributes) {
 
-        if (findProduct(productId) == null || !cart.getItems().containsKey(productId)) {
-            redirectAttributes.addFlashAttribute("error", "That cookie is not in your cart.");
+        if (findProduct(productId) == null
+                || !cart.getItems().containsKey(productId)) {
+
+            redirectAttributes.addFlashAttribute(
+                    "error", "That cookie is not in your cart.");
+
             return "redirect:/cart";
         }
 
         if (quantity < 1 || quantity > 50) {
-            redirectAttributes.addFlashAttribute("error", "Please enter a valid quantity between 1 and 50.");
+
+            redirectAttributes.addFlashAttribute(
+                    "error",
+                    "Please enter a valid quantity between 1 and 50."
+            );
+
             return "redirect:/cart";
         }
 
         cart.updateQuantity(productId, quantity);
-        redirectAttributes.addFlashAttribute("success", "Cart quantity updated successfully.");
+
+        redirectAttributes.addFlashAttribute(
+                "success", "Cart quantity updated successfully.");
+
         return "redirect:/cart";
     }
 
     // Checkout page for logged-in customers
     @GetMapping("/customer/payment")
     public String customerCheckout(
-
             Model model,
-
             Principal principal,
-
             RedirectAttributes redirectAttributes) {
 
         if (cart.isEmpty()) {
-
             return emptyCartRedirect(redirectAttributes);
         }
 
         addCartDetails(model);
 
-        // Customers who registered use their email as their username,
-        // so we can fill in the email field for them
         String username = principal.getName();
 
-        model.addAttribute("email", username.contains("@") ? username : "");
+        model.addAttribute(
+                "email", username.contains("@") ? username : "");
 
         return "payment";
     }
@@ -280,17 +277,14 @@ public class ShopController {
     // Place an order as a logged-in customer
     @PostMapping("/customer/payment")
     public String placeCustomerOrder(
-
             @RequestParam String name,
-
             @RequestParam String email,
-
             @RequestParam String address,
-
+            @RequestParam(defaultValue = "") String specialInstructions,
             RedirectAttributes redirectAttributes) {
 
         return placeOrder(
-            name, email, address, "Customer",
+            name, email, address, specialInstructions, "Customer",
             "/customer/payment", "/customer/confirmation",
             redirectAttributes
         );
@@ -299,20 +293,16 @@ public class ShopController {
     // Order confirmation for customers
     @GetMapping("/customer/confirmation")
     public String customerConfirmation() {
-
         return "order-confirmation";
     }
 
-    // Checkout page for guests (no login needed)
+    // Checkout page for guests
     @GetMapping("/guest/checkout")
     public String guestCheckout(
-
             Model model,
-
             RedirectAttributes redirectAttributes) {
 
         if (cart.isEmpty()) {
-
             return emptyCartRedirect(redirectAttributes);
         }
 
@@ -324,17 +314,14 @@ public class ShopController {
     // Place an order as a guest
     @PostMapping("/guest/checkout")
     public String placeGuestOrder(
-
             @RequestParam String name,
-
             @RequestParam String email,
-
             @RequestParam String address,
-
+            @RequestParam(defaultValue = "") String specialInstructions,
             RedirectAttributes redirectAttributes) {
 
         return placeOrder(
-            name, email, address, "Guest",
+            name, email, address, specialInstructions, "Guest",
             "/guest/checkout", "/guest/confirmation",
             redirectAttributes
         );
@@ -343,8 +330,50 @@ public class ShopController {
     // Order confirmation for guests
     @GetMapping("/guest/confirmation")
     public String guestConfirmation() {
-
         return "order-confirmation";
+    }
+
+    // View all customer and guest orders (Baker dashboard)
+    @GetMapping("/employee/orders")
+    public String viewEmployeeOrders(Model model) {
+
+        model.addAttribute("orders", orders);
+
+        return "employee-orders";
+    }
+
+    // Update an order's status
+    @PostMapping("/employee/orders/status")
+    public String updateOrderStatus(
+            @RequestParam int orderIndex,
+            @RequestParam String status,
+            RedirectAttributes redirectAttributes) {
+
+        List<String> validStatuses =
+                List.of("Pending", "Preparing", "Ready", "Completed");
+
+        if (orderIndex < 0 || orderIndex >= orders.size()) {
+
+            redirectAttributes.addFlashAttribute(
+                    "error", "Order could not be found.");
+
+            return "redirect:/employee/orders";
+        }
+
+        if (!validStatuses.contains(status)) {
+
+            redirectAttributes.addFlashAttribute(
+                    "error", "Please select a valid order status.");
+
+            return "redirect:/employee/orders";
+        }
+
+        orders.get(orderIndex).put("status", status);
+
+        redirectAttributes.addFlashAttribute(
+                "success", "Order status updated successfully.");
+
+        return "redirect:/employee/orders";
     }
 
     /*
@@ -352,30 +381,24 @@ public class ShopController {
      * check the form, save the order, empty the cart.
      */
     private String placeOrder(
-
             String name,
-
             String email,
-
             String address,
-
+            String specialInstructions,
             String orderType,
-
             String formUrl,
-
             String confirmationUrl,
-
             RedirectAttributes redirectAttributes) {
 
         // The cart may be empty if the form was submitted twice
         if (cart.isEmpty()) {
-
             return emptyCartRedirect(redirectAttributes);
         }
 
         name = name.trim();
         email = email.trim().toLowerCase(Locale.ROOT);
         address = address.trim();
+        specialInstructions = specialInstructions.trim();
 
         // Check required fields and email format
         if (name.isBlank()
@@ -394,7 +417,8 @@ public class ShopController {
         // Check field lengths
         if (name.length() > 100
                 || email.length() > 150
-                || address.length() > 300) {
+                || address.length() > 300
+                || specialInstructions.length() > 500) {
 
             redirectAttributes.addFlashAttribute(
                 "error",
@@ -414,31 +438,31 @@ public class ShopController {
                         + item.getProduct().getName())
                 .collect(Collectors.joining(", "));
 
-        // Save the order
-        orders.add(
+        // Save the order with an initial status and special instructions
+        Map<String, Object> order = new LinkedHashMap<>();
 
-            Map.of(
-                "type", orderType,
-                "name", name,
-                "email", email,
-                "address", address,
-                "items", itemSummary,
-                "total", total
-            )
-        );
+        order.put("type", orderType);
+        order.put("name", name);
+        order.put("email", email);
+        order.put("address", address);
+        order.put("items", itemSummary);
+        order.put("total", total);
+        order.put("status", "Pending");
+        order.put("specialInstructions", specialInstructions);
+
+        orders.add(order);
 
         cart.clear();
 
         redirectAttributes.addFlashAttribute("name", name);
-
         redirectAttributes.addFlashAttribute("orderItems", itemSummary);
-
         redirectAttributes.addFlashAttribute("orderTotal", total);
 
         return "redirect:" + confirmationUrl;
     }
 
-    private String emptyCartRedirect(RedirectAttributes redirectAttributes) {
+    private String emptyCartRedirect(
+            RedirectAttributes redirectAttributes) {
 
         redirectAttributes.addFlashAttribute(
             "error",
@@ -454,13 +478,11 @@ public class ShopController {
         List<CartItem> items = getCartItems();
 
         model.addAttribute("cartItems", items);
-
         model.addAttribute("cartTotal", getTotal(items));
-
         model.addAttribute("cartCount", cart.getCount());
     }
 
-    // Turns the cart (productId -> quantity) into cart lines with products
+    // Turns the cart into cart lines with products
     private List<CartItem> getCartItems() {
 
         List<CartItem> items = new ArrayList<>();
@@ -491,4 +513,29 @@ public class ShopController {
                 .findFirst()
                 .orElse(null);
     }
+    
+
+    // View the details of one customer order
+    @GetMapping("/employee/orders/details")
+    public String viewOrderDetails(
+            @RequestParam int orderIndex,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+
+        if (orderIndex < 0 || orderIndex >= orders.size()) {
+
+            redirectAttributes.addFlashAttribute(
+                    "error", "Order could not be found.");
+
+            return "redirect:/employee/orders";
+        }
+
+        model.addAttribute("order", orders.get(orderIndex));
+
+        return "order-details";
+    }
+
 }
+
+
+
